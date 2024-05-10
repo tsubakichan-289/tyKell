@@ -26,17 +26,27 @@ colorPrefixGray n str =
         (prefix, suffix) = splitAt n str
     in gray ++ prefix ++ reset ++ suffix
 
+colorCharAt :: String -> Int -> String
+colorCharAt text index = 
+  let (before, rest) = splitAt index text
+      (target, after) = splitAt 1 rest
+      red = "\ESC[31m"  -- ANSI エスケープシーケンスで赤色を開始
+      reset = "\ESC[0m" -- 色をリセット
+  in before ++ red ++ target ++ reset ++ after
+
 loop :: String -> IO Int
-loop s = loop' s 1 0  
+loop s = loop' s 1 0 False 
   where
-    loop' :: String -> Int -> Int -> IO Int
-    loop' text pos miss = do
+    loop' :: String -> Int -> Int -> Bool -> IO Int
+    loop' text pos miss isRed = do
       cls
       if pos == (1 + length text)
         then return miss
         else do
         
-        printAt 2 2 $ colorPrefixGray (pos - 1) text
+        if isRed
+          then printAt 2 2 $ colorPrefixGray (pos - 1) $ colorCharAt text (pos - 1)
+          else printAt 2 2 $ colorPrefixGray (pos - 1) text
         printAt 3 (pos + 1) "^"
         hSetBuffering stdin NoBuffering
         hSetEcho stdin False
@@ -46,8 +56,8 @@ loop s = loop' s 1 0
         char <- getChar
      
         if char == text !! (pos - 1)
-          then loop' text (pos + 1) miss
-          else loop' text pos (miss + 1)
+          then loop' text (pos + 1) miss False
+          else loop' text pos (miss + 1) True
 
 main :: IO ()
 main = do
